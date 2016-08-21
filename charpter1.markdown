@@ -111,6 +111,12 @@ var coll = document.getElementsByTagName('div');
 var arr = toArray(coll);
 ```
 
+## DOM遍历
+
+DOM遍历也是日常中较多接触的，我们最好为特定操作选择最高效的API。
+
+### 获取DOM元素
+
 
 
 
