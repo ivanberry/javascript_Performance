@@ -21,6 +21,15 @@ var exclude = {
 				jsPath: 'res/js/global/**'
 				};
 
+//无需额外处理文件的复制
+gulp.task('assert:copy', function() {
+		gulp.src([baseDir + '*.manifest', baseDir + 'VERSION']);
+		gulp.dest(baseDir);
+
+		gulp.src([baseDir + jsPath + 'global/app_worker.jsworker', baseDir + jsPath + 'global/version.json']);
+		gulp.dest(baseDir + jsPath + 'global');
+				});
+
 //html压缩
 gulp.task('html:build', function () {
     gulp.src(config.baseDir + '**/*.html')
