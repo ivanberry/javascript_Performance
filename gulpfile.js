@@ -1,6 +1,7 @@
 var gulp     = require('gulp'),
     pngquant = require('imagemin-pngquant'),
-    $        = require('gulp-load-plugins')();
+    $        = require('gulp-load-plugins')(),
+    del      = require('del');
 
 
 var config = {
@@ -11,24 +12,36 @@ var config = {
     jsPath: 'res/js/',
 
     //build dest path
-    //change the dist file to 8081 server
     //buildPath: 'build/'
     buildPath: 'fclc2/',
     configPath: '../project/fc2/hybrid/'
 };
 
+//排除路径
 var exclude = {
-				jsPath: 'res/js/global/**'
-				};
+    cssPath: 'res/css/global/'
 
+};
+
+
+/*
+ *构建文件的两种方式
+ * 1. 源文件操作
+ * 2.另外文件夹生成
+ * */
 //无需额外处理文件的复制
-gulp.task('assert:copy', function() {
-		gulp.src([baseDir + '*.manifest', baseDir + 'VERSION']);
-		gulp.dest(baseDir);
+gulp.task('assert:copy', function () {
+    gulp.src([config.baseDir + '*.manifest', config.baseDir + 'VERSION'])
+        .pipe(gulp.dest(config.buildPath));
 
-		gulp.src([baseDir + jsPath + 'global/app_worker.jsworker', baseDir + jsPath + 'global/version.json']);
-		gulp.dest(baseDir + jsPath + 'global');
-				});
+    gulp.src([config.baseDir + config.jsPath + 'global/app_worker.jsworker', config.baseDir + config.jsPath + 'global/version.json'])
+        .pipe(gulp.dest(config.buildPath + config.jsPath + 'global'));
+
+    gulp.src(config.baseDir + 'res/webfont/*')
+        .pipe(gulp.dest(config.buildPath + 'res/webfont/'));
+
+});
+
 
 //html压缩
 gulp.task('html:build', function () {
@@ -38,21 +51,26 @@ gulp.task('html:build', function () {
         .pipe(gulp.dest(config.buildPath))
 });
 
-//css压缩
+//css压缩，可以是多个src dest,不需要压缩的文件直接就src==>dest就好,相当于复制
 gulp.task('css:minify', ['css:prefixer'], function () {
     gulp.src(config.baseDir + config.cssPath + '**/*.css')
         .pipe($.plumber())
+        .pipe($.sourcemaps.init())
         .pipe($.cssnano())
+        .pipe($.sourcemaps.write('../sourcemaps'))
         .pipe(gulp.dest(config.buildPath + config.cssPath))
 
 });
 
-//autoprefixer
+/*
+ *1. autoprefix
+ *2 browser需要定义的前缀
+ **/
 gulp.task('css:prefixer', function () {
     return gulp.src(config.baseDir + config.cssPath + '**/*.css')
         .pipe($.plumber())
         .pipe($.autoprefixer({
-            browser: ['> 15%', 'IE 9', 'Android >= 4.0', 'last 3 Safari versions', 'iOS >= 8'],
+            browser: ['> 15%', 'Android >= 4.0', 'last 3 Safari versions', 'iOS >= 8'],
             cascade: false,
             remove: true
         }))
@@ -127,7 +145,7 @@ gulp.task('image:responsive', function () {
  *1. 精灵图、css自动化生成
  *2. 对全局使用的可精灵化的图生成
  *@cssFormat: css, scss
- * */
+ **/
 gulp.task('image:sprite', function () {
     var spriteDatas = gulp.src('image/*.png')
         .pipe($.plumber())
@@ -140,7 +158,11 @@ gulp.task('image:sprite', function () {
     spriteDatas.css.pipe(gulp.dest('build/css'));
 });
 
-//js 压缩
+/*
+ *1. js压缩
+ *2. 开发 sourcemaps生成
+ *3. 构建无需生成
+ **/
 gulp.task('js:minify', function () {
     gulp.src([config.baseDir + config.jsPath + '**/*.js'])
         .pipe($.plumber())
@@ -151,21 +173,25 @@ gulp.task('js:minify', function () {
         .pipe($.sourcemaps.write('../sourcemaps'))
         .pipe(gulp.dest(config.buildPath + config.jsPath));
 
-//合并公用Js文件
-
 });
 
 //js构建任务
 gulp.task('js:build', ['js:minify']);
 
 //default task
-gulp.task('default', ['js:build', 'css:build', 'image:build', 'html:build']);
+gulp.task('build', ['js:build','css:build', 'image:build', 'html:build', 'assert:copy']);
 
-//复制manifest 和 VERSION到项目文件(手动执行过程也不麻烦)
-gulp.task('shell', function () {
-    gulp.src(config.configPath)
-        .pipe($.plumber())
-        .pipe($.shell([
-            'cp <%= file.path %>/fclc.manifest <%= file.path %>/VERSION <%= file.path %>/fclc2'
-        ]))
+//del the sourcemaps
+gulp.task('del', function () {
+    del(config.buildPath + 'res/sourcemaps');
 });
+
+//watch
+gulp.task('watch', function () {
+    gulp.watch(config.baseDir + config.jsPath + '**/*.js', ['js:build']);
+    gulp.watch(config.baseDir + config.cssPath + '**/*.css', ['css:build']);
+    gulp.watch(config.baseDir + '**/*.html', ['html:build']);
+    gulp.watch(config.baseDir + config.imagePath + '**/*', ['image:build']);
+});
+
+
