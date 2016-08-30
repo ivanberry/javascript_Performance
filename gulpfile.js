@@ -1,25 +1,25 @@
-var gulp     = require('gulp'),
-    pngquant = require('imagemin-pngquant'),
-    $        = require('gulp-load-plugins')(),
-    del      = require('del');
+var gulp = require('gulp'),
+  pngquant = require('imagemin-pngquant'),
+  $ = require('gulp-load-plugins')(),
+  del = require('del');
 
 
 var config = {
-    baseDir: 'fclc2-bk/',
-    //css path
-    cssPath: 'res/css/',
-    imagePath: 'res/img/',
-    jsPath: 'res/js/',
+  baseDir: 'fclc2-bk/',
+  //css path
+  cssPath: 'res/css/',
+  imagePath: 'res/img/',
+  jsPath: 'res/js/',
 
-    //build dest path
-    //buildPath: 'build/'
-    buildPath: 'fclc2/',
-    configPath: '../project/fc2/hybrid/'
+  //build dest path
+  //buildPath: 'build/'
+  buildPath: 'fclc2/',
+  configPath: '../project/fc2/hybrid/'
 };
 
 //排除路径
 var exclude = {
-    cssPath: 'res/css/global/'
+  cssPath: 'res/css/global/'
 
 };
 
@@ -31,72 +31,78 @@ var exclude = {
  * */
 //无需额外处理文件的复制
 gulp.task('assert:copy', function () {
-    gulp.src([config.baseDir + '*.manifest', config.baseDir + 'VERSION'])
-        .pipe(gulp.dest(config.buildPath));
+  gulp.src([config.baseDir + '*.manifest', config.baseDir + 'VERSION'])
+    .pipe(gulp.dest(config.buildPath));
 
-    gulp.src([config.baseDir + config.jsPath + 'global/app_worker.jsworker', config.baseDir + config.jsPath + 'global/version.json'])
-        .pipe(gulp.dest(config.buildPath + config.jsPath + 'global'));
+  gulp.src([config.baseDir + config.jsPath + 'global/app_worker.jsworker', config.baseDir + config.jsPath + 'global/version.json'])
+    .pipe(gulp.dest(config.buildPath + config.jsPath + 'global'));
 
-    gulp.src(config.baseDir + 'res/webfont/*')
-        .pipe(gulp.dest(config.buildPath + 'res/webfont/'));
+  gulp.src(config.baseDir + 'res/webfont/*')
+    .pipe(gulp.dest(config.buildPath + 'res/webfont/'));
 
 });
 
 
 //html压缩
 gulp.task('html:build', function () {
-    gulp.src(config.baseDir + '**/*.html')
-        .pipe($.plumber())
-        .pipe($.minifyHtml())
-        .pipe(gulp.dest(config.buildPath))
+  gulp.src(config.baseDir + '**/*.html')
+    .pipe($.plumber())
+    .pipe($.minifyHtml())
+    .pipe(gulp.dest(config.buildPath))
 });
 
 //css压缩，可以是多个src dest,不需要压缩的文件直接就src==>dest就好,相当于复制
+
 gulp.task('css:minify', ['css:prefixer'], function () {
-    gulp.src(config.baseDir + config.cssPath + '**/*.css')
-        .pipe($.plumber())
-        .pipe($.sourcemaps.init())
-        .pipe($.cssnano())
-        .pipe($.sourcemaps.write('../sourcemaps'))
-        .pipe(gulp.dest(config.buildPath + config.cssPath))
+  gulp.src(config.baseDir + config.cssPath + '**/*.css')
+    .pipe($.plumber())
+    .pipe($.sourcemaps.init())
+    .pipe($.cssnano({
+      reduceIdents: false,
+      colormin: true
+    }))
+    .pipe($.sourcemaps.write('../sourcemaps'))
+    .pipe(gulp.dest(config.buildPath + config.cssPath))
 
 });
+
+//css压缩，合并处理，较少HTTP请求,路由注册只引入一个css文件，而公用文件有缓存处理，可以不考虑合并
 
 /*
  *1. autoprefix
  *2 browser需要定义的前缀
  **/
 gulp.task('css:prefixer', function () {
-    return gulp.src(config.baseDir + config.cssPath + '**/*.css')
-        .pipe($.plumber())
-        .pipe($.autoprefixer({
-            browser: ['> 15%', 'Android >= 4.0', 'last 3 Safari versions', 'iOS >= 8'],
-            cascade: false,
-            remove: true
-        }))
+  return gulp.src(config.baseDir + config.cssPath + '**/*.css')
+    .pipe($.plumber())
+    .pipe($.autoprefixer({
+      browser: ['> 15%', 'Android >= 4.0', 'last 3 Safari versions', 'iOS >= 8'],
+      cascade: false,
+      remove: true
+    }))
 });
 
 //资源base64替换
 gulp.task('css:base64', function () {
-    return gulp.src(config.baseDir + config.cssPath + '**/*.css')
-        .pipe($.plumber())
-        .pipe($.cssBase64({
-            maxWeightResource: 8000
-        }))
+  return gulp.src(config.baseDir + config.cssPath + '**/*.css')
+    .pipe($.plumber())
+    .pipe($.cssBase64({
+      maxWeightResource: 8000
+    }))
 });
 
 gulp.task('css:build', ['css:prefixer', 'css:minify']);
 
 //图片
 gulp.task('image:minify', function () {
-    gulp.src(config.baseDir + config.imagePath + '**/*.{png,jpg,gif,ico}')
-        .pipe($.plumber())
-        .pipe($.cache($.imagemin({
-            progressive: true,
-            svgoPlugins: [{removeViewBox: false}],
-            use: [pngquant()]
-        })))
-        .pipe(gulp.dest(config.buildPath + config.imagePath))
+  gulp.src(config.baseDir + config.imagePath + '**/*.{png,jpg,gif,ico}')
+    .pipe($.plumber())
+    .pipe($.cache($.imagemin({
+      progressive: true,
+      svgoPlugins: [{removeViewBox: false}],
+      use: [pngquant()]
+    })))
+    .pipe(gulp.dest(config.buildPath + config.imagePath))
 });
 
 //图片构建任务
@@ -111,34 +117,34 @@ gulp.task('image:build', ['image:minify']);
  *6. 需要配合 img srcset sizes实现响应式和按需加载
  * */
 gulp.task('image:responsive', function () {
-    //路径处理
-    return gulp.src('*.{jpg,png}')
-        .pipe($.plumber())
-        .pipe($.responsive({
-            // Convert all images to JPEG format
-            '*': [{
-                // image.jpg is 375 pixels wide
-                width: 375,
-                rename: {
-                    extname: '.jpg'
-                },
-            }, {
-                // image@2x.jpg is 480 pixels wide
-                width: 480,
-                rename: {
-                    suffix: '@2x',
-                    extname: '.jpg',
-                },
-            }, {
-                // image@3x.jpg is 768 pixels wide
-                width: 750,
-                rename: {
-                    suffix: '@3x',
-                    extname: '.jpg',
-                },
-            }],
-        }))
-        .pipe(gulp.dest('dist'));
+  //路径处理
+  return gulp.src('*.{jpg,png}')
+    .pipe($.plumber())
+    .pipe($.responsive({
+      // Convert all images to JPEG format
+      '*': [{
+        // image.jpg is 375 pixels wide
+        width: 375,
+        rename: {
+          extname: '.jpg'
+        },
+      }, {
+        // image@2x.jpg is 480 pixels wide
+        width: 480,
+        rename: {
+          suffix: '@2x',
+          extname: '.jpg',
+        },
+      }, {
+        // image@3x.jpg is 768 pixels wide
+        width: 750,
+        rename: {
+          suffix: '@3x',
+          extname: '.jpg',
+        },
+      }],
+    }))
+    .pipe(gulp.dest('dist'));
 });
 
 /*
@@ -147,15 +153,15 @@ gulp.task('image:responsive', function () {
  *@cssFormat: css, scss
  **/
 gulp.task('image:sprite', function () {
-    var spriteDatas = gulp.src('image/*.png')
-        .pipe($.plumber())
-        .pipe($.spritesmith({
-            imgName: 'sprite.png',
-            cssName: 'sprite.scss',
-            cssFormat: 'scss'
-        }));
-    spriteDatas.img.pipe(gulp.dest('build/img/'));
-    spriteDatas.css.pipe(gulp.dest('build/css'));
+  var spriteDatas = gulp.src('image/*.png')
+    .pipe($.plumber())
+    .pipe($.spritesmith({
+      imgName: 'sprite.png',
+      cssName: 'sprite.scss',
+      cssFormat: 'scss'
+    }));
+  spriteDatas.img.pipe(gulp.dest('build/img/'));
+  spriteDatas.css.pipe(gulp.dest('build/css'));
 });
 
 /*
@@ -164,14 +170,14 @@ gulp.task('image:sprite', function () {
  *3. 构建无需生成
  **/
 gulp.task('js:minify', function () {
-    gulp.src([config.baseDir + config.jsPath + '**/*.js'])
-        .pipe($.plumber())
-        .pipe($.sourcemaps.init())
-        .pipe($.uglify({
-            preserveComments: 'license'
-        }))
-        .pipe($.sourcemaps.write('../sourcemaps'))
-        .pipe(gulp.dest(config.buildPath + config.jsPath));
+  gulp.src([config.baseDir + config.jsPath + '**/*.js'])
+    .pipe($.plumber())
+    .pipe($.sourcemaps.init())
+    .pipe($.uglify({
+      preserveComments: 'license'
+    }))
+    .pipe($.sourcemaps.write('../sourcemaps'))
+    .pipe(gulp.dest(config.buildPath + config.jsPath));
 
 });
 
@@ -179,19 +185,19 @@ gulp.task('js:minify', function () {
 gulp.task('js:build', ['js:minify']);
 
 //default task
-gulp.task('build', ['js:build','css:build', 'image:build', 'html:build', 'assert:copy']);
+gulp.task('build', ['js:build', 'css:build', 'image:build', 'html:build', 'assert:copy']);
 
 //del the sourcemaps
 gulp.task('del', function () {
-    del(config.buildPath + 'res/sourcemaps');
+  del(config.buildPath + 'res/sourcemaps');
 });
 
 //watch
 gulp.task('watch', function () {
-    gulp.watch(config.baseDir + config.jsPath + '**/*.js', ['js:build']);
-    gulp.watch(config.baseDir + config.cssPath + '**/*.css', ['css:build']);
-    gulp.watch(config.baseDir + '**/*.html', ['html:build']);
-    gulp.watch(config.baseDir + config.imagePath + '**/*', ['image:build']);
+  gulp.watch(config.baseDir + config.jsPath + '**/*.js', ['js:build']);
+  gulp.watch(config.baseDir + config.cssPath + '**/*.css', ['css:build']);
+  gulp.watch(config.baseDir + '**/*.html', ['html:build']);
+  gulp.watch(config.baseDir + config.imagePath + '**/*', ['image:build']);
 });
 
 
