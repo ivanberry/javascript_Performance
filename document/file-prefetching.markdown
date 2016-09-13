@@ -13,6 +13,8 @@
 ### 资源拆分与合并
 - 首屏
 考虑到有3秒的loading图存在，首屏的极速输出要求不高，可最大化利用，不影响页面输出的情况下，加载更多的资源，实现缓存。
+- iframe
+利用iframe，配合合并压缩的样式，脚本文件，有效减少HTTP请求。关键在于，哪些资源可以合并，需要合并。
 
  #### iframe资源加载（一）
  
@@ -31,8 +33,7 @@
   </html>
   ```
   
-  - 添加到可以某些页面：
-
+  - 添加到可以某些页面或者主页：
 ```html
 <iframe src="prefetching.html"></iframe>
 ```
@@ -61,93 +62,93 @@ from cache，缓存
 #### iframe资源加载（二）
 
 ```javascript
- window.onload = function () {
-     var i = 0,
-           preloadJS = ['res/js/prefetch-test.js'],
-           len = preloadJS.length,
-           src = [];
-     try {
-         preloadJS.forEach(function (element) {
-             //只缓存资源地址，不运行对应的js文件，并不会运行，要运行必须要appendChild
-             var img = new Image();
-             img.src = element;
-             src.push(img.src);
-         });
-     } catch (e) {};
+(function (window, document) {
+    /*!
+     *@method: prefetchResource
+     *@method: createNode
+     *@pram: arr
+     *@pram: resourceType
+     *@callback: callback
+     *@return: Prefetch object
+     *@author: tab
+     */
+    function prefetchResource(arr, resourceType, callback) {
 
-     //创建脚本容器
-     var scriptsFragment = document.createDocumentFragment(),
-         head = document.querySelector('head');
+        var type = resourceType || 'script';
 
-     //获取已缓存的资源地址
-     src.forEach(function (element) {
-         var script = document.createElement('script');
-         script.src = element;
-         scriptsFragment.appendChild(script);
-     });
+        //get the resource and cache them all with Image instance
+        var urlCache = [];
 
-     //挂载
-     head.appendChild(scriptsFragment);
-   };
-   
-   //抽象方法loadAsync,缺省为javascript脚本
-/*!
- *@method: loadAsync
- *@pram: arr
- *@pram: resourceType
- *@return :undefined
- *@author: tab
- */
-function loadAsync(arr, resourceType) {
+        arr.forEach(function (element) {
+            //cache the resource
+            var img = new Image();
+            img.src = element;
 
-    var type = resourceType || 'script';
-    //cache them all with Image instance
-    var srcCache = [];
-    arr.forEach(function (element) {
-        //cache it
-        var img = new Image();
-        img.src = element;
-        //element will ok too!
-        srcCache.push(img.src);
-    });
+            //error events
+            img.onload = img.onerror = function (e) {
+            if (typeof callback === 'function') {
+                callback();
+                } else {
+                console.log('Good Job! The ' + element + ' has been cached!');
+                document.cookie = 'isCache=true';
+            };
 
-    //获取已缓存的资源地址,insert to document
-srcCache.forEach(function (element) {
+            //element will ok too!
+            urlCache.push(img.src);
+        });
 
-        createNode(element, type);
-    });
-}
-
-function createNode(url, resourceType) {
-    var type = resourceType,
-            nodesFragment = document.createDocumentFragment(),
-            head = window.parent.document.head,
-            node;
-
-    if (type === 'css') {
-        node = document.createElement('link');
-        node.setAttribute('rel', 'stylesheet');
-        node.href = url;
-
-    } else {
-        node = document.createElement('script');
-        node.src = url;
+        //获取已缓存的资源地址,insert to top window document
+        setTimeout(function () {
+            var time = new Date();
+            console.log(time);
+            urlCache.forEach(function (element) {
+                createNode(element, type);
+            });
+        }, 3e3);
     }
 
-    nodesFragment.appendChild(node);
+    //create and run it
+    function createNode(url, resourceType) {
+        var type = resourceType,
+                nodesFragment = document.createDocumentFragment(),
+                //get the top window context
+                head = window.parent.document.head,
+                node;
 
-    head.appendChild(nodesFragment);
+        if (type === 'css') {
+            node = document.createElement('link');
+            node.setAttribute('rel', 'stylesheet');
+            node.href = url;
 
-}
+        } else {
+            node = document.createElement('script');
+            node.src = url;
+        }
 
-//()
-try {
-    loadAsync(['res/js/prefetch-test.js'], 'script');
-    loadAsync(['res/css/prefetch-test.css'], 'css');
-} catch (e) {
-    console.error(e);
-} 
+        nodesFragment.appendChild(node);
+
+        head.appendChild(nodesFragment);
+
+    }
+
+    var Prefetch = {
+        load: prefetchResource,
+        create: createNode
+    }
+
+    //暴露
+    window.parent.Prefetch = window.Prefetch = Prefetch;
+
+    return Prefetch;
+
+
+})(window, document);
 ```
+
+结果
+
+![beforeCache.PNG](https://ooo.0o0.ooo/2016/09/02/57c8f468a14de.png)
+![afterCache.PNG](https://ooo.0o0.ooo/2016/09/02/57c8f46893d4d.png)
 
 问题：
 
@@ -165,6 +166,8 @@ try {
 - 合并的策略是什么
 
 #### 版本更新处理
+
+这里怎么办么？没有思路呀！
 
 
 ### 图片懒加载
