@@ -1,4 +1,4 @@
-# Vue
+# Vue Overview
 - reactive data binding
 - composable view components
 -  focused on views only

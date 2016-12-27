@@ -124,8 +124,8 @@ gulp.task('rev', function(){
 - isScroll: 滑动特效等
 - Hightcharts/echarts: 数据可视化库
 - touchjs.min：手势库
-- H5lock: 锁屏库
-- twemoji：表情库
+- ~~H5lock: 锁屏库~~
+- ~~twemoji：表情库~~
 - swiper： slide库
 
 ## 存在问题
